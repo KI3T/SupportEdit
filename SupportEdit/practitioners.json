@@ -1,0 +1,47 @@
+[
+  {
+    "CategoryName": "Huyết học",
+    "Code": "030390/HCM-CCHN",
+    "Description": "Huyết học - 030390"
+  },
+  {
+    "CategoryName": "Vi sinh",
+    "Code": "025633/HCM-CCHN",
+    "Description": "Vi sinh - 025633"
+  },
+  {
+    "CategoryName": "Giải phẩu bệnh",
+    "Code": "0025404/HCM-CCHN",
+    "Description": "Giải phẩu bệnh - 0025404"
+  },
+  {
+    "CategoryName": "Sinh hoá",
+    "Code": "0025595/HCM-CCHN",
+    "Description": "Sinh hoá - 0025595"
+  },
+  {
+    "CategoryName": "Ghi điện cơ",
+    "Code": "036884/HCM-CCHN",
+    "Description": "Ghi điện cơ - 036884"
+  },
+  {
+    "CategoryName": "Điều trị ban ngày",
+    "Code": "047160/HCM-CCHN",
+    "Description": "Điều trị ban ngày - 047160"
+  },
+  {
+    "CategoryName": "Hồi sức tích cực chống độc",
+    "Code": "053331/HCM-CCHN",
+    "Description": "Hồi sức tích cực chống độc - 053331"
+  },
+  {
+    "CategoryName": "Sơ sinh",
+    "Code": "004208/HCM-GPHN",
+    "Description": "Sơ sinh - 004208"
+  },
+  {
+    "CategoryName": "Thận nội tiết",
+    "Code": "0019078/HCM-CCHN",
+    "Description": "Thận nội tiết - 0019078"
+  }
+]

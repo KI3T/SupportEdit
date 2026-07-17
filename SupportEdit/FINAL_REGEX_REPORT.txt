@@ -1,0 +1,152 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    XMLFIXSERVICE REGEX FIX - FINAL REPORT                       ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+FILE MODIFIED
+═════════════
+SupportEdit\Services\XmlFixService.cs
+
+BUILD STATUS
+════════════
+✓ BUILD SUCCESSFUL (no errors, no warnings)
+
+
+EXACT CURRENT PATTERNS IN CODE
+══════════════════════════════
+
+1. DvktBlockPattern (Line 26)
+   ───────────────────────────
+   private const string DvktBlockPattern = @"<CHI_TIET_DVKT\b[^>]*>[\s\S]*?</CHI_TIET_DVKT>";
+
+   Pattern Structure:
+   • <CHI_TIET_DVKT  - Opening tag name
+   • \b              - Word boundary
+   • [^>]*           - Zero or more non-closing-bracket characters (attributes)
+   • >               - End of opening tag
+   • [\s\S]*?        - Minimal whitespace OR non-whitespace (ungreedy)
+   • </CHI_TIET_DVKT> - Closing tag
+
+
+2. SttPattern (Line 27)
+   ────────────────────
+   private const string SttPattern = @"<STT>\s*(?<stt>\d+)\s*</STT>";
+
+   Pattern Structure:
+   • <STT>                    - Opening STT tag
+   • \s*                      - Optional whitespace
+   • (?<stt>\d+)              - Named capture group: one or more digits
+   • \s*                      - Optional whitespace
+   • </STT>                   - Closing STT tag
+
+
+WHAT WAS WRONG (CORRECTED)
+═══════════════════════════
+❌ WRONG: @"<CHI_TIET_DVKT\b[^>]>[\s\S]?</CHI_TIET_DVKT>"
+   • [^>]      - Single character that is not >
+   • [^>]>     - NOT valid for multi-attribute tags
+   • [\s\S]?   - Zero or one character (too limiting)
+
+✓ NOW CORRECT: @"<CHI_TIET_DVKT\b[^>]*>[\s\S]*?</CHI_TIET_DVKT>"
+   • [^>]*     - Zero or MORE characters that are not >
+   • [\s\S]*?  - Zero or MORE characters (any), ungreedy match
+
+
+VERIFICATION CHECKLIST
+══════════════════════
+
+Pattern Usage
+─────────────
+✓ DvktBlockPattern is used by FindAllDvktBlocks (line 37)
+✓ SttPattern is used consistently across the service
+✓ AllowSlowFallback defaults to false (line 30)
+✓ No hardcoded pattern variants found
+
+Bad Pattern Search
+──────────────────
+✓ Searched for: [^>]>[\s\S]?
+✓ Searched for: [\s\S]?</CHI_TIET_DVKT>
+✓ Searched for: [^>]> without * following
+✓ Result: NO MATCHES FOUND - All patterns corrected
+
+Block Finding Logic
+───────────────────
+✓ FindDvktBlockByStt (line 54) - Default implementation
+  → Calls FindDvktBlockBySttFast first
+  → Falls back to FindAllDvktBlocks only if AllowSlowFallback=true
+
+✓ FindDvktBlockBySttFast (line 87) - Fast block finder
+  → Searches for STT first
+  → Uses LastIndexOf to find opening tag before STT
+  → Uses IndexOf to find closing tag after STT
+  → Extracts exact block without cross-block matches
+
+✓ FindAllDvktBlocks (line 33) - Fallback method
+  → Uses DvktBlockPattern constant
+  → Extracts all blocks individually
+  → Only called if AllowSlowFallback=true
+
+
+INTERNAL TESTS
+══════════════
+Location: Lines 340-408 (RunInternalTests method)
+
+Test Method Changes:
+✓ Added AssertTrue(bool, string) helper (throws Exception on fail)
+✓ Removed all Debug.WriteLine calls
+✓ Replaced with real assertions that throw on failure
+✓ Test now returns success string OR throws exception
+
+Tests Executed:
+1. ✓ FindAllDvktBlocks returns exactly 3 blocks
+2. ✓ DvktBlockPattern matches expected constant
+3. ✓ FindDvktBlockBySttFast finds STT 257
+4. ✓ Found block contains <STT>257</STT>
+5. ✓ Found block does NOT contain <STT>1</STT>
+6. ✓ Found block does NOT contain <STT>2</STT>
+7. ✓ FixNgayThYl(NGAY_YL="202605110911") → NGAY_TH_YL="202605110921" (10 min later)
+
+Exception Flow:
+• If ANY assertion fails → throw Exception("Internal test failed: ...")
+• Caller will see full exception message
+• No silent failures
+
+
+MODIFIED CODE SECTIONS
+══════════════════════
+
+1. Lines 26-27: Pattern Constants (VERIFIED CORRECT)
+2. Lines 30: AllowSlowFallback default (SAFE)
+3. Lines 33-50: FindAllDvktBlocks (USES CONSTANT)
+4. Lines 54-71: FindDvktBlockByStt (CORRECT LOGIC)
+5. Lines 87-138: FindDvktBlockBySttFast (SAFE IMPL)
+6. Lines 340-408: RunInternalTests (REWRITTEN WITH ASSERTS)
+
+
+SUMMARY
+═══════
+
+STATUS: ✓ COMPLETE AND VERIFIED
+
+DvktBlockPattern Current:
+@"<CHI_TIET_DVKT\b[^>]*>[\s\S]*?</CHI_TIET_DVKT>"
+					  ▲
+					  │
+					[^>]* = zero or MORE non-> characters ✓
+				   [\s\S]*? = zero or MORE any char, ungreedy ✓
+
+Bad Pattern Status:
+✓ No instances of [^>]> without *
+✓ No instances of [\s\S]? without *
+✓ All patterns are now correct
+
+RunInternalTests Status:
+✓ Throws Exception on failure
+✓ Returns success message on pass
+✓ 7 assertions covering all critical paths
+
+Build Status:
+✓ No compilation errors
+✓ No warnings
+✓ Ready for use
+
+═════════════════════════════════════════════════════════════════════════════════
