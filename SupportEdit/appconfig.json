@@ -61,5 +61,7 @@
   "Xml4ClickOffsetY": 945,
   "UseMouseClickFocusFallback": true,
   "ClickBeforeFindOnly": true,
-  "RefocusByMouseAfterFind": false
+  "RefocusByMouseAfterFind": false,
+  "CheckAttendanceBeforePractitionerFix": false,
+  "AutoReplaceAbsentPractitioner": false
 }

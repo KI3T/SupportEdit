@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SupportEdit.Models;
@@ -92,6 +93,8 @@ namespace SupportEdit.Services
         public bool ClickBeforeFindOnly { get; set; } = true;
         public bool RefocusByMouseAfterFind { get; set; } = false;
         public bool AutoFixNguoiThucHien { get; set; } = false;
+        public bool CheckAttendanceBeforePractitionerFix { get; set; } = false;
+        public bool AutoReplaceAbsentPractitioner { get; set; } = false;
 
         // Legacy: Mouse click focus fallback for auto-focusing XML controls (deprecated, use per-XML above)
         public bool UseMouseClickFocusFallback { get; set; } = true;
@@ -109,19 +112,6 @@ namespace SupportEdit.Services
 
         public void Load()
         {
-            // nếu chưa có practitioners.json thì tạo mẫu
-            if (!File.Exists(PractitionersFilePath))
-            {
-                var sample = new List<PractitionerItem>
-                {
-                    new PractitionerItem{ CategoryName = "Huyết học", Code = "030390/HCM-CCHN", Description = "Người thực hiện mặc định cho xét nghiệm huyết học" },
-                    new PractitionerItem{ CategoryName = "Vi sinh", Code = "025633/HCM-CCHN", Description = "Người thực hiện mặc định cho xét nghiệm vi sinh" },
-                    new PractitionerItem{ CategoryName = "Sinh hóa", Code = "012345/HCM-CCHN", Description = "Người thực hiện mặc định cho xét nghiệm sinh hóa" }
-                };
-                try { File.WriteAllText(PractitionersFilePath, JsonSerializer.Serialize(sample, new JsonSerializerOptions{ WriteIndented = true })); }
-                catch { }
-            }
-
             if (File.Exists(PractitionersFilePath))
             {
                 try
@@ -133,6 +123,10 @@ namespace SupportEdit.Services
                 {
                     Practitioners = new List<PractitionerItem>();
                 }
+            }
+            else
+            {
+                Practitioners = new List<PractitionerItem>();
             }
 
             // Nếu chưa có config app thì tạo mẫu (with new optimized defaults)
@@ -200,6 +194,8 @@ namespace SupportEdit.Services
                     { "ClickBeforeFindOnly", true },
                     { "RefocusByMouseAfterFind", false }
                     ,{ "AutoFixNguoiThucHien", false }
+                    ,{ "CheckAttendanceBeforePractitionerFix", false }
+                    ,{ "AutoReplaceAbsentPractitioner", false }
                 };
                 try { File.WriteAllText(ConfigPath, JsonSerializer.Serialize(sample, new JsonSerializerOptions{ WriteIndented = true })); }
                 catch { }
@@ -283,6 +279,8 @@ namespace SupportEdit.Services
                         if (doc.ContainsKey("ClickBeforeFindOnly")) ClickBeforeFindOnly = doc["ClickBeforeFindOnly"].GetBoolean();
                         if (doc.ContainsKey("RefocusByMouseAfterFind")) RefocusByMouseAfterFind = doc["RefocusByMouseAfterFind"].GetBoolean();
                         if (doc.ContainsKey("AutoFixNguoiThucHien")) AutoFixNguoiThucHien = doc["AutoFixNguoiThucHien"].GetBoolean();
+                        if (doc.ContainsKey("CheckAttendanceBeforePractitionerFix")) CheckAttendanceBeforePractitionerFix = doc["CheckAttendanceBeforePractitionerFix"].GetBoolean();
+                        if (doc.ContainsKey("AutoReplaceAbsentPractitioner")) AutoReplaceAbsentPractitioner = doc["AutoReplaceAbsentPractitioner"].GetBoolean();
 
                         // Ensure missing keys are written back (add any missing new keys)
                         var normalized = new Dictionary<string, object>
@@ -351,6 +349,8 @@ namespace SupportEdit.Services
                             { "ClickBeforeFindOnly", ClickBeforeFindOnly },
                             { "RefocusByMouseAfterFind", RefocusByMouseAfterFind }
                             ,{ "AutoFixNguoiThucHien", AutoFixNguoiThucHien }
+                            ,{ "CheckAttendanceBeforePractitionerFix", CheckAttendanceBeforePractitionerFix }
+                            ,{ "AutoReplaceAbsentPractitioner", AutoReplaceAbsentPractitioner }
                         };
 
                         try
@@ -443,12 +443,69 @@ namespace SupportEdit.Services
                     { "ClickBeforeFindOnly", ClickBeforeFindOnly },
                     { "RefocusByMouseAfterFind", RefocusByMouseAfterFind }
                     ,{ "AutoFixNguoiThucHien", AutoFixNguoiThucHien }
+                    ,{ "CheckAttendanceBeforePractitionerFix", CheckAttendanceBeforePractitionerFix }
+                    ,{ "AutoReplaceAbsentPractitioner", AutoReplaceAbsentPractitioner }
                 };
                 File.WriteAllText(ConfigPath, JsonSerializer.Serialize(doc, new JsonSerializerOptions{ WriteIndented = true }));
             }
             catch { }
         }
+
+        public void ExportPractitioners(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("Đường dẫn tệp không hợp lệ.", nameof(filePath));
+            }
+
+            var json = JsonSerializer.Serialize(Practitioners, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(filePath, json);
+        }
+
+        public int ImportPractitioners(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                throw new FileNotFoundException("Không tìm thấy tệp danh sách người thực hiện.", filePath);
+            }
+
+            List<PractitionerItem> imported;
+            try
+            {
+                var json = File.ReadAllText(filePath);
+                imported = JsonSerializer.Deserialize<List<PractitionerItem>>(json)
+                    ?? throw new InvalidDataException("Tệp không chứa danh sách người thực hiện hợp lệ.");
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidDataException("Tệp không đúng định dạng do phần mềm xuất.", ex);
+            }
+
+            foreach (var item in imported)
+            {
+                if (item == null || string.IsNullOrWhiteSpace(item.CategoryName) ||
+                    (!item.UsesMaBacSi() && string.IsNullOrWhiteSpace(item.Code)))
+                {
+                    throw new InvalidDataException("Tệp có người thực hiện thiếu Nhóm hoặc Mã.");
+                }
+
+                item.CategoryName = item.CategoryName.Trim();
+                item.Code = item.Code?.Trim() ?? string.Empty;
+                item.CodeSource = item.UsesMaBacSi()
+                    ? PractitionerItem.CodeSourceMaBacSi
+                    : PractitionerItem.CodeSourceReplacement;
+                item.Description = item.Description?.Trim() ?? string.Empty;
+                item.ServiceNames = item.ServiceNames?
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Select(name => name.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList() ?? new List<string>();
+            }
+
+            var normalizedJson = JsonSerializer.Serialize(imported, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(PractitionersFilePath, normalizedJson);
+            Practitioners = imported;
+            return Practitioners.Count;
+        }
     }
 }
-
-

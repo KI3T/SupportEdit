@@ -32,16 +32,21 @@
             txtErrorRaw = new TextBox();
             btnReadError = new Button();
             btnDongBoVAS = new Button();
+            btnPortalFix = new Button();
             pnlErrors = new FlowLayoutPanel();
             txtLog = new TextBox();
             menu = new MenuStrip();
             menuConfig = new ToolStripMenuItem();
             miPract = new ToolStripMenuItem();
             miTitle = new ToolStripMenuItem();
+            menuSavePosition = new ToolStripMenuItem();
+            menuSearchRecords = new ToolStripMenuItem();
+            miFindDischargeDate = new ToolStripMenuItem();
             menuDebug = new ToolStripMenuItem();
             miTestXml3 = new ToolStripMenuItem();
             miOpenDebug = new ToolStripMenuItem();
             label1 = new Label();
+            labelCancelShortcut = new Label();
             menu.SuspendLayout();
             SuspendLayout();
             // 
@@ -79,15 +84,26 @@
             btnDongBoVAS.Text = "Đồng bộ VAS";
             btnDongBoVAS.UseVisualStyleBackColor = true;
             // 
+            // btnPortalFix
+            // 
+            btnPortalFix.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnPortalFix.Location = new Point(1061, 162);
+            btnPortalFix.Margin = new Padding(3, 4, 3, 4);
+            btnPortalFix.Name = "btnPortalFix";
+            btnPortalFix.Size = new Size(171, 45);
+            btnPortalFix.TabIndex = 4;
+            btnPortalFix.Text = "Sửa lỗi trên Cổng";
+            btnPortalFix.UseVisualStyleBackColor = true;
+            // 
             // pnlErrors
             // 
             pnlErrors.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             pnlErrors.AutoScroll = true;
             pnlErrors.FlowDirection = FlowDirection.TopDown;
-            pnlErrors.Location = new Point(14, 224);
+            pnlErrors.Location = new Point(14, 264);
             pnlErrors.Margin = new Padding(3, 4, 3, 4);
             pnlErrors.Name = "pnlErrors";
-            pnlErrors.Size = new Size(1218, 443);
+            pnlErrors.Size = new Size(1218, 403);
             pnlErrors.TabIndex = 4;
             pnlErrors.WrapContents = false;
             // 
@@ -108,7 +124,7 @@
             // menu
             // 
             menu.ImageScalingSize = new Size(20, 20);
-            menu.Items.AddRange(new ToolStripItem[] { menuConfig, menuDebug });
+            menu.Items.AddRange(new ToolStripItem[] { menuConfig, menuSavePosition, menuSearchRecords, menuDebug });
             menu.Location = new Point(0, 0);
             menu.Name = "menu";
             menu.Padding = new Padding(7, 3, 0, 3);
@@ -133,6 +149,25 @@
             miTitle.Name = "miTitle";
             miTitle.Size = new Size(354, 26);
             miTitle.Text = "Cấu hình tiêu đề cửa sổ phần mềm XML";
+            // 
+            // menuSavePosition
+            // 
+            menuSavePosition.Name = "menuSavePosition";
+            menuSavePosition.Size = new Size(91, 24);
+            menuSavePosition.Text = "Lưu vị trí";
+            // 
+            // menuSearchRecords
+            // 
+            menuSearchRecords.DropDownItems.AddRange(new ToolStripItem[] { miFindDischargeDate });
+            menuSearchRecords.Name = "menuSearchRecords";
+            menuSearchRecords.Size = new Size(128, 24);
+            menuSearchRecords.Text = "Tìm kiếm hồ sơ";
+            // 
+            // miFindDischargeDate
+            // 
+            miFindDischargeDate.Name = "miFindDischargeDate";
+            miFindDischargeDate.Size = new Size(224, 26);
+            miFindDischargeDate.Text = "Tìm ngày ra viện";
             // 
             // menuDebug
             // 
@@ -164,16 +199,29 @@
             label1.Text = "Lưu ý: Khi tool chạy thì không đụng vào chuột hay bàn phím ";
             label1.TextAlign = ContentAlignment.MiddleCenter;
             // 
+            // labelCancelShortcut
+            // 
+            labelCancelShortcut.AutoSize = true;
+            labelCancelShortcut.ForeColor = Color.Brown;
+            labelCancelShortcut.Location = new Point(634, 235);
+            labelCancelShortcut.Name = "labelCancelShortcut";
+            labelCancelShortcut.Size = new Size(321, 20);
+            labelCancelShortcut.TabIndex = 6;
+            labelCancelShortcut.Text = "Nhấn tổ hợp Shift + Esc để dừng thao tác sửa";
+            labelCancelShortcut.TextAlign = ContentAlignment.MiddleCenter;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1257, 933);
+            Controls.Add(labelCancelShortcut);
             Controls.Add(label1);
             Controls.Add(menu);
             Controls.Add(txtErrorRaw);
             Controls.Add(btnReadError);
             Controls.Add(btnDongBoVAS);
+            Controls.Add(btnPortalFix);
             Controls.Add(pnlErrors);
             Controls.Add(txtLog);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -200,10 +248,15 @@
         private ToolStripMenuItem menuConfig;
         private ToolStripMenuItem miPract;
         private ToolStripMenuItem miTitle;
+        private ToolStripMenuItem menuSavePosition;
+        private ToolStripMenuItem menuSearchRecords;
+        private ToolStripMenuItem miFindDischargeDate;
         private ToolStripMenuItem menuDebug;
         private ToolStripMenuItem miTestXml3;
         private ToolStripMenuItem miOpenDebug;
         private Label label1;
+        private Label labelCancelShortcut;
         private Button btnDongBoVAS;
+        private Button btnPortalFix;
     }
 }

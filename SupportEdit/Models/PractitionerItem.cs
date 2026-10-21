@@ -13,6 +13,7 @@ namespace SupportEdit.Models
         public string CodeSource { get; set; } = CodeSourceReplacement;
         public string Description { get; set; }
         public List<string> ServiceNames { get; set; } = new List<string>();
+        public bool CheckAttendance { get; set; } = true;
 
         public bool UsesMaBacSi()
         {

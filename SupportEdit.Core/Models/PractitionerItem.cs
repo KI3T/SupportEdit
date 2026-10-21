@@ -6,5 +6,6 @@ namespace SupportEdit.Core.Models
         public string CategoryName { get; set; }
         public string Code { get; set; }
         public string Description { get; set; }
+        public bool CheckAttendance { get; set; } = true;
     }
 }

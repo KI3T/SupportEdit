@@ -100,6 +100,7 @@ public IntPtr FindWindowByTitleContains(string keyword)
         // Kích hoạt cửa sổ
         public bool ActivateWindow(IntPtr hWnd)
         {
+            AutomationCancellation.ThrowIfCancellationRequested();
             if (hWnd == IntPtr.Zero) return false;
             // ensure visible then set foreground
             ShowWindow(hWnd, SW_SHOW);
@@ -108,10 +109,29 @@ public IntPtr FindWindowByTitleContains(string keyword)
         }
 
         // Các hotkey tiện ích (dùng SendKeys)
-        public void SendHotkeyCtrlA() => System.Windows.Forms.SendKeys.SendWait("^a");
-        public void SendHotkeyCtrlC() => System.Windows.Forms.SendKeys.SendWait("^c");
-        public void SendHotkeyCtrlV() => System.Windows.Forms.SendKeys.SendWait("^v");
-        public void SendHotkeyCtrlF() => System.Windows.Forms.SendKeys.SendWait("^f");
+        public void SendHotkeyCtrlA()
+        {
+            AutomationCancellation.ThrowIfCancellationRequested();
+            System.Windows.Forms.SendKeys.SendWait("^a");
+        }
+
+        public void SendHotkeyCtrlC()
+        {
+            AutomationCancellation.ThrowIfCancellationRequested();
+            System.Windows.Forms.SendKeys.SendWait("^c");
+        }
+
+        public void SendHotkeyCtrlV()
+        {
+            AutomationCancellation.ThrowIfCancellationRequested();
+            System.Windows.Forms.SendKeys.SendWait("^v");
+        }
+
+        public void SendHotkeyCtrlF()
+        {
+            AutomationCancellation.ThrowIfCancellationRequested();
+            System.Windows.Forms.SendKeys.SendWait("^f");
+        }
 
         // Gửi text vào control đang active (dán nhanh)
         public void SendTextToActiveControl(string text)
@@ -129,8 +149,10 @@ public IntPtr FindWindowByTitleContains(string keyword)
         // Đợi sau hành động theo cấu hình
         public void WaitAfterAction()
         {
+            AutomationCancellation.ThrowIfCancellationRequested();
             var ms = _config?.FindDelayMs ?? 200;
             Thread.Sleep(ms);
+            AutomationCancellation.ThrowIfCancellationRequested();
         }
 
         // Copy toàn bộ XML hiện tại từ app ngoài: Ctrl+A, Ctrl+C, đọc Clipboard với retry
@@ -161,6 +183,7 @@ public IntPtr FindWindowByTitleContains(string keyword)
 
             for (int i = 0; i < attempts; i++)
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 try
                 {
                     var text = Clipboard.GetText();

@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using SupportEdit.Models;
+using MessageBox = SupportEdit.UI.SupportMessageBox;
 
 namespace SupportEdit
 {
@@ -204,6 +205,7 @@ namespace SupportEdit
                 Code = rdoReplacementCode.Checked ? txtCode.Text.Trim() : string.Empty,
                 CodeSource = rdoMaBacSi.Checked ? PractitionerItem.CodeSourceMaBacSi : PractitionerItem.CodeSourceReplacement,
                 Description = txtDesc.Text.Trim(),
+                CheckAttendance = _sourceItem?.CheckAttendance ?? true,
                 ServiceNames = _sourceItem?.ServiceNames == null
                     ? new System.Collections.Generic.List<string>()
                     : new System.Collections.Generic.List<string>(_sourceItem.ServiceNames)

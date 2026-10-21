@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Windows.Automation;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using MessageBox = SupportEdit.UI.SupportMessageBox;
 
 namespace SupportEdit.Services
 {
@@ -145,6 +146,7 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 if (_mainWindowHandle == IntPtr.Zero)
                     GetMainWindow();
 
@@ -202,6 +204,10 @@ namespace SupportEdit.Services
                 Thread.Sleep(150);
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logSb?.AppendLine($"TryMouseClickXmlOffset exception: {ex.Message}");
@@ -214,11 +220,13 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 // Just send Esc to close Find dialog
                 SendKeys.SendWait("{ESC}");
                 Thread.Sleep(100);
                 return true;
             }
+            catch (OperationCanceledException) { throw; }
             catch { return false; }
         }
 
@@ -228,6 +236,7 @@ namespace SupportEdit.Services
             var swTotal = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 // First, ensure main window is active
                 if (_mainWindowHandle == IntPtr.Zero)
                     GetMainWindow();
@@ -311,6 +320,10 @@ namespace SupportEdit.Services
                 }
 
                 return false;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch
             {
@@ -458,9 +471,11 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 SendKeys.SendWait("{ESC}");
                 Thread.Sleep(80);
             }
+            catch (OperationCanceledException) { throw; }
             catch { }
         }
 
@@ -468,6 +483,7 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 if (string.IsNullOrEmpty(text)) return false;
 
                 logSb?.AppendLine($"--- FindTextFreshFast: {label ?? text} ---");
@@ -485,6 +501,10 @@ namespace SupportEdit.Services
                 CloseFindDialogIfOpen();
                 Thread.Sleep(120);
                 return true;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -627,6 +647,7 @@ namespace SupportEdit.Services
 
                 for (int lineIndex = 1; lineIndex <= _config.DirectScanMaxLines; lineIndex++)
                 {
+                    AutomationCancellation.ThrowIfCancellationRequested();
                     var currentLine = CopyCurrentLine() ?? string.Empty;
                     // log if STT found in this line
                     int parsedStt;
@@ -817,6 +838,7 @@ namespace SupportEdit.Services
 
         private void MoveToPhysicalLineStart(int delayMs = 10)
         {
+            AutomationCancellation.ThrowIfCancellationRequested();
             // FastColoredTextBox/Home commonly toggles between first non-space char and column 0.
             // Press twice so Shift+End selects the whole physical line, including indentation.
             SendKeys.SendWait("{HOME}");
@@ -830,9 +852,11 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 SendKeys.SendWait("{DOWN}");
                 Thread.Sleep(_config.FastDirectKeyDelayMs > 0 ? _config.FastDirectKeyDelayMs : 5);
             }
+            catch (OperationCanceledException) { throw; }
             catch { }
         }
 
@@ -841,6 +865,7 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 MoveToPhysicalLineStart(10);
                 SendKeys.SendWait("+{END}");
                 Thread.Sleep(10);
@@ -871,11 +896,13 @@ namespace SupportEdit.Services
 
                 return null;
             }
+            catch (OperationCanceledException) { throw; }
             catch { return null; }
         }
 
         private string CopyCurrentOrAdjacentLineContaining(string tagName, StringBuilder logSb = null)
         {
+            AutomationCancellation.ThrowIfCancellationRequested();
             var needle = "<" + tagName;
 
             var current = CopyCurrentLineFast() ?? string.Empty;
@@ -906,6 +933,7 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 MoveToPhysicalLineStart(10);
                 SendKeys.SendWait("+{END}");
                 Thread.Sleep(10);
@@ -916,6 +944,7 @@ namespace SupportEdit.Services
                 Thread.Sleep(_config.FastDirectClipboardDelayMs > 0 ? _config.FastDirectClipboardDelayMs : 20);
                 return true;
             }
+            catch (OperationCanceledException) { throw; }
             catch { return false; }
         }
 
@@ -1028,6 +1057,7 @@ namespace SupportEdit.Services
         //       ESC (close Find NOW, before any copy) → wait → copy current line → verify
         public GoToSttFastReport GoToSttFastAndReport(int xmlNumber, int stt)
         {
+            AutomationCancellation.ThrowIfCancellationRequested();
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var logSb = new StringBuilder();
             var report = new GoToSttFastReport();
@@ -1169,6 +1199,10 @@ namespace SupportEdit.Services
                 report.ElapsedMs = sw.ElapsedMilliseconds;
                 report.LogPath = SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{xmlNumber}_STT{stt}_GoToSttFast_VerifyFail", logSb.ToString());
                 return report;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -1341,6 +1375,7 @@ namespace SupportEdit.Services
 
                 for (int i = 0; i < _config.DirectLocalScanMaxLinesWithinBlock; i++)
                 {
+                    AutomationCancellation.ThrowIfCancellationRequested();
                     if (swTotal.ElapsedMilliseconds > _config.DirectFindThenLocalTotalTimeoutMs)
                     {
                         swTotal.Stop();
@@ -1472,6 +1507,10 @@ namespace SupportEdit.Services
                 SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{xmlNumber}_STT{targetStt}_DirectFind_NotFound", logSb.ToString());
                 MessageBox.Show($"Không tìm thấy NGAY_TH_YL trong block STT {targetStt} (scanned {linesScanned} lines).", "Not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -1621,6 +1660,10 @@ namespace SupportEdit.Services
 
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 swTotal.Stop();
@@ -1740,6 +1783,10 @@ namespace SupportEdit.Services
 
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 swTotal.Stop();
@@ -1759,6 +1806,16 @@ namespace SupportEdit.Services
         public bool FastDirectFixMucHuong(int xmlNumber, int targetStt)
         {
             return FastDirectFixNumericTag(xmlNumber, targetStt, "MUC_HUONG", "100");
+        }
+
+        public bool FastDirectClearSoCccd(int xmlNumber, int targetStt)
+        {
+            return FastDirectFixNumericTag(xmlNumber, targetStt, "SO_CCCD", string.Empty, true);
+        }
+
+        public bool FastDirectClearMaBenhKt(int xmlNumber)
+        {
+            return FastDirectFixNumericTag(xmlNumber, 0, "MA_BENH_KT", string.Empty, false, true);
         }
 
         public bool FastDirectFixNgayTToan(int xmlNumber, int targetStt)
@@ -1873,6 +1930,10 @@ namespace SupportEdit.Services
 
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 swTotal.Stop();
@@ -1882,7 +1943,13 @@ namespace SupportEdit.Services
             }
         }
 
-        private bool FastDirectFixNumericTag(int xmlNumber, int targetStt, string tagName, string newValue)
+        private bool FastDirectFixNumericTag(
+            int xmlNumber,
+            int targetStt,
+            string tagName,
+            string newValue,
+            bool clearNumericValue = false,
+            bool clearAnyValue = false)
         {
             var swTotal = System.Diagnostics.Stopwatch.StartNew();
             var logSb = new StringBuilder();
@@ -1947,7 +2014,29 @@ namespace SupportEdit.Services
                     return false;
                 }
 
-                var newLine = BuildTagLinePreserveIndent(line, tagName, newValue);
+                string newLine;
+                if (clearNumericValue || clearAnyValue)
+                {
+                    var valuePattern = clearAnyValue ? "[^<]*" : "\\s*[0-9]+\\s*";
+                    var clearTagRegex = new System.Text.RegularExpressions.Regex(
+                        $"<{System.Text.RegularExpressions.Regex.Escape(tagName)}>{valuePattern}</{System.Text.RegularExpressions.Regex.Escape(tagName)}>",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (!clearTagRegex.IsMatch(line))
+                    {
+                        swTotal.Stop();
+                        logSb.AppendLine($"[TOTAL: {swTotal.ElapsedMilliseconds}ms] {tagName} does not contain a supported value");
+                        SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{xmlNumber}_STT{targetStt}_FastDirect{tagName}_InvalidValue", logSb.ToString());
+                        var requirement = clearAnyValue ? "nội dung hợp lệ" : "giá trị toàn chữ số";
+                        MessageBox.Show($"{tagName} không chứa {requirement} nên không tự động xóa.", "Giá trị không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return false;
+                    }
+
+                    newLine = clearTagRegex.Replace(line, $"<{tagName}/>", 1);
+                }
+                else
+                {
+                    newLine = BuildTagLinePreserveIndent(line, tagName, newValue);
+                }
                 if (!ReplaceCurrentLineFast(newLine))
                 {
                     swTotal.Stop();
@@ -1958,7 +2047,10 @@ namespace SupportEdit.Services
                 }
 
                 var verifyLine = CopyCurrentLineFast() ?? string.Empty;
-                var verified = verifyLine.IndexOf($"<{tagName}>{newValue}</{tagName}>", StringComparison.InvariantCultureIgnoreCase) >= 0;
+                var expectedTag = clearNumericValue || clearAnyValue
+                    ? $"<{tagName}/>"
+                    : $"<{tagName}>{newValue}</{tagName}>";
+                var verified = verifyLine.IndexOf(expectedTag, StringComparison.InvariantCultureIgnoreCase) >= 0;
 
                 swTotal.Stop();
                 logSb.AppendLine($"OldLine: {line}");
@@ -1968,6 +2060,10 @@ namespace SupportEdit.Services
                 SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{xmlNumber}_STT{targetStt}_FastDirect{tagName}_Success", logSb.ToString());
 
                 return true;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -2002,6 +2098,7 @@ namespace SupportEdit.Services
                 string ngayYlValue = null;
                 for (int i = 0; i < _config.DirectScanMaxLines; i++)
                 {
+                    AutomationCancellation.ThrowIfCancellationRequested();
                     MoveNextLine();
                     var currentLine = CopyCurrentLine() ?? string.Empty;
 
@@ -2115,6 +2212,10 @@ namespace SupportEdit.Services
                 SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{xmlNumber}_STT{targetStt}_DirectIndexFixNgayThYl_NotFound", logSb.ToString());
                 return false;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logSb.AppendLine("Exception: " + ex.ToString());
@@ -2167,6 +2268,7 @@ namespace SupportEdit.Services
 
                 for (int i = 0; i < _config.DirectLocalScanMaxLinesWithinBlock; i++)
                 {
+                    AutomationCancellation.ThrowIfCancellationRequested();
                     if (swTotal.ElapsedMilliseconds > _config.DirectFindThenLocalTotalTimeoutMs)
                     {
                         swTotal.Stop();
@@ -2281,6 +2383,10 @@ namespace SupportEdit.Services
                 MessageBox.Show($"Không tìm thấy NGUOI_THUC_HIEN trong block STT {targetStt} (scanned {linesScanned} lines).", "Not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 swTotal.Stop();
@@ -2324,6 +2430,7 @@ namespace SupportEdit.Services
                 int linesScanned = 0;
                 for (int i = 0; i < _config.DirectLocalScanMaxLinesWithinBlock; i++)
                 {
+                    AutomationCancellation.ThrowIfCancellationRequested();
                     var swScan = System.Diagnostics.Stopwatch.StartNew();
                     MoveNextLineLocal();
                     var (currentLine, copyMs) = CopyCurrentLineLocalOptimized();
@@ -2383,6 +2490,10 @@ namespace SupportEdit.Services
                     SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{xmlNumber}_STT{targetStt}_DirectIndexFixNguoiThucHien_Wrapper_Failed", logSb.ToString());
                 }
                 return ok;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -2669,6 +2780,7 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 var id = _config.XmlControlAutomationIdPrefix + xmlNumber.ToString();
                 if (!FocusControlByAutomationId(id)) return false;
 
@@ -2756,6 +2868,10 @@ namespace SupportEdit.Services
 
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 var sb = new StringBuilder();
@@ -2771,6 +2887,7 @@ namespace SupportEdit.Services
         {
             try
             {
+                AutomationCancellation.ThrowIfCancellationRequested();
                 var id = _config.XmlControlAutomationIdPrefix + xmlNumber.ToString();
                 if (!FocusControlByAutomationId(id)) return false;
 
@@ -2821,6 +2938,10 @@ namespace SupportEdit.Services
                 SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{xmlNumber}_STT{stt}_DirectFixNguoiThucHien", logSb.ToString());
 
                 return true;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using SupportEdit.Services;
+using MessageBox = SupportEdit.UI.SupportMessageBox;
 
 namespace SupportEdit
 {

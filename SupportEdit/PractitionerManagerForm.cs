@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows.Forms;
 using SupportEdit.Services;
 using SupportEdit.Models;
+using MessageBox = SupportEdit.UI.SupportMessageBox;
 
 namespace SupportEdit
 {
@@ -13,7 +14,11 @@ namespace SupportEdit
         private Button btnEdit;
         private Button btnDelete;
         private Button btnServices;
+        private Button btnImport;
+        private Button btnExport;
         private CheckBox chkAutoFix;
+        private CheckBox chkAttendance;
+        private CheckBox chkAutoReplace = null!;
         private Button btnSave;
         private Button btnClose;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn1;
@@ -21,6 +26,7 @@ namespace SupportEdit
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
         private DataGridViewTextBoxColumn dataGridViewTextBoxColumn4;
         private ConfigService _config;
+        private bool _loadingData;
 
         public PractitionerManagerForm()
         {
@@ -41,7 +47,11 @@ namespace SupportEdit
             btnEdit = new Button();
             btnDelete = new Button();
             btnServices = new Button();
+            btnImport = new Button();
+            btnExport = new Button();
             chkAutoFix = new CheckBox();
+            chkAttendance = new CheckBox();
+            chkAutoReplace = new CheckBox();
             btnSave = new Button();
             btnClose = new Button();
             ((System.ComponentModel.ISupportInitialize)dgv).BeginInit();
@@ -57,11 +67,14 @@ namespace SupportEdit
             dgv.Location = new Point(12, 12);
             dgv.MultiSelect = false;
             dgv.Name = "dgv";
-            dgv.ReadOnly = true;
+            dgv.ReadOnly = false;
             dgv.RowHeadersWidth = 51;
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgv.Size = new Size(760, 362);
             dgv.TabIndex = 0;
+            dgv.EditMode = DataGridViewEditMode.EditOnEnter;
+            dgv.CurrentCellDirtyStateChanged += Dgv_CurrentCellDirtyStateChanged;
+            dgv.CellValueChanged += Dgv_CellValueChanged;
             // 
             // btnAdd
             // 
@@ -107,6 +120,28 @@ namespace SupportEdit
             btnServices.UseVisualStyleBackColor = true;
             btnServices.Click += BtnServices_Click;
             // 
+            // btnImport
+            // 
+            btnImport.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnImport.Location = new Point(412, 420);
+            btnImport.Name = "btnImport";
+            btnImport.Size = new Size(86, 28);
+            btnImport.TabIndex = 5;
+            btnImport.Text = "Nhập";
+            btnImport.UseVisualStyleBackColor = true;
+            btnImport.Click += BtnImport_Click;
+            // 
+            // btnExport
+            // 
+            btnExport.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnExport.Location = new Point(504, 420);
+            btnExport.Name = "btnExport";
+            btnExport.Size = new Size(86, 28);
+            btnExport.TabIndex = 6;
+            btnExport.Text = "Xuất";
+            btnExport.UseVisualStyleBackColor = true;
+            btnExport.Click += BtnExport_Click;
+            // 
             // chkAutoFix
             // 
             chkAutoFix.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
@@ -114,10 +149,34 @@ namespace SupportEdit
             chkAutoFix.Location = new Point(12, 381);
             chkAutoFix.Name = "chkAutoFix";
             chkAutoFix.Size = new Size(380, 24);
-            chkAutoFix.TabIndex = 6;
+            chkAutoFix.TabIndex = 9;
             chkAutoFix.Text = "Tự động sửa NGUOI_THUC_HIEN    <---    <---    <---";
             chkAutoFix.UseVisualStyleBackColor = true;
             chkAutoFix.CheckedChanged += ChkAutoFix_CheckedChanged;
+            // 
+            // chkAttendance
+            // 
+            chkAttendance.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            chkAttendance.AutoSize = true;
+            chkAttendance.Location = new Point(420, 381);
+            chkAttendance.Name = "chkAttendance";
+            chkAttendance.Size = new Size(171, 24);
+            chkAttendance.TabIndex = 10;
+            chkAttendance.Text = "Kiểm tra chấm công";
+            chkAttendance.UseVisualStyleBackColor = true;
+            chkAttendance.CheckedChanged += ChkAttendance_CheckedChanged;
+            // 
+            // chkAutoReplace
+            // 
+            chkAutoReplace.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            chkAutoReplace.AutoSize = true;
+            chkAutoReplace.Location = new Point(594, 381);
+            chkAutoReplace.Name = "chkAutoReplace";
+            chkAutoReplace.Size = new Size(178, 24);
+            chkAutoReplace.TabIndex = 11;
+            chkAutoReplace.Text = "Tự động thay thế NTH";
+            chkAutoReplace.UseVisualStyleBackColor = true;
+            chkAutoReplace.CheckedChanged += ChkAutoReplace_CheckedChanged;
             // 
             // btnSave
             // 
@@ -149,7 +208,11 @@ namespace SupportEdit
             Controls.Add(btnEdit);
             Controls.Add(btnDelete);
             Controls.Add(btnServices);
+            Controls.Add(btnImport);
+            Controls.Add(btnExport);
             Controls.Add(chkAutoFix);
+            Controls.Add(chkAttendance);
+            Controls.Add(chkAutoReplace);
             Controls.Add(btnSave);
             Controls.Add(btnClose);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -174,17 +237,70 @@ namespace SupportEdit
                 return;
             }
 
+            _loadingData = true;
             dgv.DataSource = null;
             dgv.DataSource = _config.Practitioners.Select(p => new PractitionerRow
             {
                 CategoryName = p.CategoryName,
                 Code = p.UsesMaBacSi() ? "Lấy MA_BAC_SI" : p.Code,
                 Description = p.Description,
-                ServiceCount = p.ServiceNames?.Count ?? 0
+                ServiceCount = p.ServiceNames?.Count ?? 0,
+                CheckAttendance = p.CheckAttendance
             }).ToList();
+
+            foreach (DataGridViewColumn column in dgv.Columns)
+            {
+                column.SortMode = DataGridViewColumnSortMode.NotSortable;
+                column.ReadOnly = column.DataPropertyName != nameof(PractitionerRow.CheckAttendance);
+            }
+
+            var attendanceColumn = dgv.Columns
+                .Cast<DataGridViewColumn>()
+                .FirstOrDefault(column => column.DataPropertyName == nameof(PractitionerRow.CheckAttendance));
+            if (attendanceColumn != null)
+            {
+                attendanceColumn.HeaderText = "Kiểm tra chấm công";
+                attendanceColumn.Visible = _config.CheckAttendanceBeforePractitionerFix;
+                attendanceColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
+                attendanceColumn.Width = 145;
+            }
+            _loadingData = false;
             chkAutoFix.CheckedChanged -= ChkAutoFix_CheckedChanged;
             chkAutoFix.Checked = _config.AutoFixNguoiThucHien;
             chkAutoFix.CheckedChanged += ChkAutoFix_CheckedChanged;
+            chkAttendance.CheckedChanged -= ChkAttendance_CheckedChanged;
+            chkAttendance.Checked = _config.CheckAttendanceBeforePractitionerFix;
+            chkAttendance.CheckedChanged += ChkAttendance_CheckedChanged;
+            chkAutoReplace.CheckedChanged -= ChkAutoReplace_CheckedChanged;
+            chkAutoReplace.Checked = _config.AutoReplaceAbsentPractitioner;
+            chkAutoReplace.Enabled = _config.CheckAttendanceBeforePractitionerFix;
+            chkAutoReplace.CheckedChanged += ChkAutoReplace_CheckedChanged;
+        }
+
+        private void Dgv_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (dgv.IsCurrentCellDirty && dgv.CurrentCell is DataGridViewCheckBoxCell)
+            {
+                dgv.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        private void Dgv_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (_loadingData || _config == null || e.RowIndex < 0 || e.RowIndex >= _config.Practitioners.Count)
+            {
+                return;
+            }
+
+            var column = dgv.Columns[e.ColumnIndex];
+            if (column.DataPropertyName != nameof(PractitionerRow.CheckAttendance))
+            {
+                return;
+            }
+
+            var value = dgv.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
+            _config.Practitioners[e.RowIndex].CheckAttendance = value is bool isChecked && isChecked;
+            _config.Save();
         }
 
         private void BtnAdd_Click(object sender, EventArgs e)
@@ -234,10 +350,102 @@ namespace SupportEdit
             }
         }
 
+        private void BtnImport_Click(object sender, EventArgs e)
+        {
+            if (_config == null) return;
+
+            using var dialog = new OpenFileDialog
+            {
+                Title = "Nhập danh sách người thực hiện",
+                Filter = "Danh sách người thực hiện (*.json)|*.json|Tất cả tệp (*.*)|*.*",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+            if (MessageBox.Show(
+                    "Danh sách hiện tại sẽ được thay thế bằng danh sách trong tệp đã chọn. Tiếp tục?",
+                    "Nhập người thực hiện",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                var importedCount = _config.ImportPractitioners(dialog.FileName);
+                LoadData();
+                MessageBox.Show(
+                    $"Đã nhập {importedCount} người thực hiện.",
+                    "Nhập thành công",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Không thể nhập tệp. " + ex.Message,
+                    "Lỗi nhập dữ liệu",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnExport_Click(object sender, EventArgs e)
+        {
+            if (_config == null) return;
+
+            using var dialog = new SaveFileDialog
+            {
+                Title = "Xuất danh sách người thực hiện",
+                Filter = "Danh sách người thực hiện (*.json)|*.json",
+                DefaultExt = "json",
+                AddExtension = true,
+                FileName = $"nguoi-thuc-hien-{DateTime.Now:yyyyMMdd}.json"
+            };
+
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+            try
+            {
+                _config.ExportPractitioners(dialog.FileName);
+                MessageBox.Show(
+                    $"Đã xuất {_config.Practitioners.Count} người thực hiện.",
+                    "Xuất thành công",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Không thể xuất tệp. " + ex.Message,
+                    "Lỗi xuất dữ liệu",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
         private void ChkAutoFix_CheckedChanged(object sender, EventArgs e)
         {
             if (_config == null) return;
             _config.AutoFixNguoiThucHien = chkAutoFix.Checked;
+            _config.Save();
+        }
+
+        private void ChkAttendance_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_config == null) return;
+            _config.CheckAttendanceBeforePractitionerFix = chkAttendance.Checked;
+            _config.Save();
+            LoadData();
+        }
+
+        private void ChkAutoReplace_CheckedChanged(object? sender, EventArgs e)
+        {
+            if (_config == null) return;
+            _config.AutoReplaceAbsentPractitioner = chkAutoReplace.Checked;
             _config.Save();
         }
 
@@ -273,6 +481,7 @@ namespace SupportEdit
             public string Code { get; set; }
             public string Description { get; set; }
             public int ServiceCount { get; set; }
+            public bool CheckAttendance { get; set; } = true;
         }
     }
 }

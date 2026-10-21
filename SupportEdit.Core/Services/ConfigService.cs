@@ -24,19 +24,6 @@ namespace SupportEdit.Core.Services
 
         public void Load()
         {
-            // nếu chưa có practitioners.json thì tạo mẫu
-            if (!File.Exists(PractitionersFile))
-            {
-                var sample = new List<PractitionerItem>
-                {
-                    new PractitionerItem{ CategoryName = "Huyết học", Code = "030390/HCM-CCHN", Description = "Người thực hiện mặc định cho xét nghiệm huyết học" },
-                    new PractitionerItem{ CategoryName = "Vi sinh", Code = "025633/HCM-CCHN", Description = "Người thực hiện mặc định cho xét nghiệm vi sinh" },
-                    new PractitionerItem{ CategoryName = "Sinh hóa", Code = "012345/HCM-CCHN", Description = "Người thực hiện mặc định cho xét nghiệm sinh hóa" }
-                };
-                try { File.WriteAllText(PractitionersFile, JsonSerializer.Serialize(sample, new JsonSerializerOptions{ WriteIndented = true })); }
-                catch { }
-            }
-
             if (File.Exists(PractitionersFile))
             {
                 try
@@ -48,6 +35,10 @@ namespace SupportEdit.Core.Services
                 {
                     Practitioners = new List<PractitionerItem>();
                 }
+            }
+            else
+            {
+                Practitioners = new List<PractitionerItem>();
             }
 
             // Nếu chưa có config app thì tạo mẫu

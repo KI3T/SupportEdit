@@ -17,6 +17,7 @@ namespace SupportEdit.UI
         private Button btnFixTBncct;
         private Button btnFixMucHuong;
         private Button btnFixNgayTToan;
+        private Button btnFixSoCccd;
         private Button btnFixAll;
 
         private XmlErrorGroup _group;
@@ -29,6 +30,7 @@ namespace SupportEdit.UI
         public event Action<XmlErrorGroup> OnFixTBncct;
         public event Action<XmlErrorGroup> OnFixMucHuong;
         public event Action<XmlErrorGroup> OnFixNgayTToan;
+        public event Action<XmlErrorGroup> OnFixSoCccd;
         public event Action<XmlErrorGroup> OnFixAll;
 
         public ErrorCard()
@@ -67,6 +69,7 @@ namespace SupportEdit.UI
             btnFixTBncct = CreateButton("Sửa T_BNCCT");
             btnFixMucHuong = CreateButton("Sửa MUC_HUONG");
             btnFixNgayTToan = CreateButton("Sửa NGAY_TTOAN");
+            btnFixSoCccd = CreateButton("Xóa SO_CCCD");
             btnFixAll = CreateButton("Sửa tất cả lỗi hỗ trợ");
 
             btnGoto.Click += BtnGoto_Click;
@@ -75,6 +78,7 @@ namespace SupportEdit.UI
             btnFixTBncct.Click += BtnFixTBncct_Click;
             btnFixMucHuong.Click += BtnFixMucHuong_Click;
             btnFixNgayTToan.Click += BtnFixNgayTToan_Click;
+            btnFixSoCccd.Click += BtnFixSoCccd_Click;
             btnFixAll.Click += BtnFixAll_Click;
 
             Controls.Add(lblTitle);
@@ -85,6 +89,7 @@ namespace SupportEdit.UI
             pnlButtons.Controls.Add(btnFixTBncct);
             pnlButtons.Controls.Add(btnFixMucHuong);
             pnlButtons.Controls.Add(btnFixNgayTToan);
+            pnlButtons.Controls.Add(btnFixSoCccd);
             pnlButtons.Controls.Add(btnFixAll);
             Controls.Add(pnlButtons);
         }
@@ -133,6 +138,11 @@ namespace SupportEdit.UI
             OnFixNgayTToan?.Invoke(_group);
         }
 
+        private void BtnFixSoCccd_Click(object sender, EventArgs e)
+        {
+            OnFixSoCccd?.Invoke(_group);
+        }
+
         private void BtnFixAll_Click(object sender, EventArgs e)
         {
             OnFixAll?.Invoke(_group);
@@ -149,6 +159,7 @@ namespace SupportEdit.UI
                 btnFixTBncct.Visible = false;
                 btnFixMucHuong.Visible = false;
                 btnFixNgayTToan.Visible = false;
+                btnFixSoCccd.Visible = false;
                 btnFixAll.Visible = false;
                 Width = 400;
                 Height = 80;
@@ -168,7 +179,8 @@ namespace SupportEdit.UI
             var hasTBncct = group.Items.Any(i => i.Field == "T_BNCCT");
             var hasMucHuong = group.Items.Any(i => i.Field == "MUC_HUONG");
             var hasNgayTToan = group.Items.Any(i => i.Field == "NGAY_TTOAN");
-            var hasSupportedFix = hasNgay || hasNguoi || hasTBncct || hasMucHuong || hasNgayTToan;
+            var hasSoCccd = group.Items.Any(i => i.Field == "SO_CCCD");
+            var hasSupportedFix = hasNgay || hasNguoi || hasTBncct || hasMucHuong || hasNgayTToan || hasSoCccd;
 
             btnGoto.Visible = true;
             btnFixNgay.Visible = hasNgay;
@@ -176,6 +188,7 @@ namespace SupportEdit.UI
             btnFixTBncct.Visible = hasTBncct;
             btnFixMucHuong.Visible = hasMucHuong;
             btnFixNgayTToan.Visible = hasNgayTToan;
+            btnFixSoCccd.Visible = hasSoCccd;
             btnFixAll.Visible = hasSupportedFix;
 
             Width = 700;

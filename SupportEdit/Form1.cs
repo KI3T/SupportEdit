@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using SupportEdit.Services;
 using SupportEdit.UI;
 using SupportEdit.Models;
+using MessageBox = SupportEdit.UI.SupportMessageBox;
 
 namespace SupportEdit
 {
@@ -29,6 +30,7 @@ namespace SupportEdit
         private BackupService _backup;
         private VasSyncService _vasSync;
         private GdFormAutomationService _gdFormAutomation;
+        private AttendanceCheckService _attendanceCheck;
         private Win32InputService _win32Input;
 
         public Form1()
@@ -45,6 +47,7 @@ namespace SupportEdit
             _win32Input = new Win32InputService(_config);
             _vasSync = new VasSyncService(_config, _win32Input);
             _gdFormAutomation = new GdFormAutomationService(_config, _automation);
+            _attendanceCheck = new AttendanceCheckService(_config, _automation);
 
             // wire events (designer assigned fields)
             this.txtErrorRaw = (TextBox)Controls.Find("txtErrorRaw", true).FirstOrDefault();
@@ -53,6 +56,7 @@ namespace SupportEdit
             this.txtLog = (TextBox)Controls.Find("txtLog", true).FirstOrDefault();
 
             if (btnReadError != null) btnReadError.Click += BtnReadError_Click;
+            btnPortalFix.Click += BtnPortalFix_Click;
 
             // wire test and debug menu
             WireMenuEvents();
@@ -95,7 +99,17 @@ namespace SupportEdit
             if (menu == null) return;
 
             var menuConfig = menu.Items.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Cấu hình");
+            var searchMenu = menu.Items.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Tìm kiếm hồ sơ");
             var debugMenu = menu.Items.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Debug");
+
+            var findDischargeDate = searchMenu?.DropDownItems
+                .OfType<ToolStripMenuItem>()
+                .FirstOrDefault(m => m.Text == "Tìm ngày ra viện");
+            if (findDischargeDate != null)
+            {
+                findDischargeDate.Click -= FindDischargeDate_Click;
+                findDischargeDate.Click += FindDischargeDate_Click;
+            }
 
             var miPract = menuConfig?.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Quản lý người thực hiện");
             if (miPract != null)
@@ -146,11 +160,11 @@ namespace SupportEdit
                 testPasteGd.Click -= TestPasteGdForm_Click;
                 testPasteGd.Click += TestPasteGdForm_Click;
 
-                var saveVasTabPos = debugMenu.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí tab Thành công VAS");
+                var saveVasTabPos = menuSavePosition.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí tab Thành công VAS");
                 if (saveVasTabPos == null)
                 {
                     saveVasTabPos = new ToolStripMenuItem("Lưu vị trí tab Thành công VAS");
-                    debugMenu.DropDownItems.Add(saveVasTabPos);
+                    menuSavePosition.DropDownItems.Add(saveVasTabPos);
                 }
                 saveVasTabPos.Click -= SaveVasSuccessTabPosition_Click;
                 saveVasTabPos.Click += SaveVasSuccessTabPosition_Click;
@@ -191,38 +205,38 @@ namespace SupportEdit
                 testVasOffsets.Click -= TestVasOffsets_Click;
                 testVasOffsets.Click += TestVasOffsets_Click;
 
-                var saveVasLogPos = debugMenu.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí khung log VAS");
+                var saveVasLogPos = menuSavePosition.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí khung log VAS");
                 if (saveVasLogPos == null)
                 {
                     saveVasLogPos = new ToolStripMenuItem("Lưu vị trí khung log VAS");
-                    debugMenu.DropDownItems.Add(saveVasLogPos);
+                    menuSavePosition.DropDownItems.Add(saveVasLogPos);
                 }
                 saveVasLogPos.Click -= SaveVasLogPosition_Click;
                 saveVasLogPos.Click += SaveVasLogPosition_Click;
 
-                var saveMaGDPos = debugMenu.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí nút Mã GD");
+                var saveMaGDPos = menuSavePosition.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí nút Mã GD");
                 if (saveMaGDPos == null)
                 {
                     saveMaGDPos = new ToolStripMenuItem("Lưu vị trí nút Mã GD");
-                    debugMenu.DropDownItems.Add(saveMaGDPos);
+                    menuSavePosition.DropDownItems.Add(saveMaGDPos);
                 }
                 saveMaGDPos.Click -= SaveMaGDPosition_Click;
                 saveMaGDPos.Click += SaveMaGDPosition_Click;
 
-                var saveTxtBodyPos = debugMenu.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí txtbody GDForm");
+                var saveTxtBodyPos = menuSavePosition.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí txtbody GDForm");
                 if (saveTxtBodyPos == null)
                 {
                     saveTxtBodyPos = new ToolStripMenuItem("Lưu vị trí txtbody GDForm");
-                    debugMenu.DropDownItems.Add(saveTxtBodyPos);
+                    menuSavePosition.DropDownItems.Add(saveTxtBodyPos);
                 }
                 saveTxtBodyPos.Click -= SaveGdTxtBodyPosition_Click;
                 saveTxtBodyPos.Click += SaveGdTxtBodyPosition_Click;
 
-                var saveConvertPos = debugMenu.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí nút Chuyển dữ liệu");
+                var saveConvertPos = menuSavePosition.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí nút Chuyển dữ liệu");
                 if (saveConvertPos == null)
                 {
                     saveConvertPos = new ToolStripMenuItem("Lưu vị trí nút Chuyển dữ liệu");
-                    debugMenu.DropDownItems.Add(saveConvertPos);
+                    menuSavePosition.DropDownItems.Add(saveConvertPos);
                 }
                 saveConvertPos.Click -= SaveGdConvertButtonPosition_Click;
                 saveConvertPos.Click += SaveGdConvertButtonPosition_Click;
@@ -245,11 +259,11 @@ namespace SupportEdit
                 testTiming.Click -= TestTimingSuaNgayThYl_Click;
                 testTiming.Click += TestTimingSuaNgayThYl_Click;
 
-                var saveXmlPos = debugMenu.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí click XML hiện tại");
+                var saveXmlPos = menuSavePosition.DropDownItems.OfType<ToolStripMenuItem>().FirstOrDefault(m => m.Text == "Lưu vị trí click XML hiện tại");
                 if (saveXmlPos == null)
                 {
                     saveXmlPos = new ToolStripMenuItem("Lưu vị trí click XML hiện tại");
-                    debugMenu.DropDownItems.Add(saveXmlPos);
+                    menuSavePosition.DropDownItems.Add(saveXmlPos);
                 }
                 saveXmlPos.Click -= SaveXml3ClickPosition_Click;
                 saveXmlPos.Click += SaveXml3ClickPosition_Click;
@@ -272,6 +286,12 @@ namespace SupportEdit
             var f = new PractitionerManagerForm(cfg) { TopMost = true };
             f.ShowDialog(this);
             _config.Load();
+        }
+
+        private void FindDischargeDate_Click(object sender, EventArgs e)
+        {
+            using var form = new DischargeDateSearchForm();
+            form.ShowDialog(this);
         }
 
         private void MiTitle_Click(object sender, EventArgs e)
@@ -329,16 +349,90 @@ namespace SupportEdit
             {
                 var card = new ErrorCard(g, _automation, _config);
                 card.OnGoto += Card_OnGoto;
-                card.OnFixNgay += Card_OnFixNgay;
-                card.OnFixNguoi += Card_OnFixNguoi;
-                card.OnFixTBncct += Card_OnFixTBncct;
-                card.OnFixMucHuong += Card_OnFixMucHuong;
-                card.OnFixNgayTToan += Card_OnFixNgayTToan;
-                card.OnFixAll += Card_OnFixAll;
+                card.OnFixNgay += group => RunCancellableFix(() => Card_OnFixNgay(group));
+                card.OnFixNguoi += group => RunCancellableFix(() => Card_OnFixNguoi(group));
+                card.OnFixTBncct += group => RunCancellableFix(() => Card_OnFixTBncct(group));
+                card.OnFixMucHuong += group => RunCancellableFix(() => Card_OnFixMucHuong(group));
+                card.OnFixNgayTToan += group => RunCancellableFix(() => Card_OnFixNgayTToan(group));
+                card.OnFixSoCccd += group => RunCancellableFix(() => Card_OnFixSoCccd(group));
+                card.OnFixAll += group => RunCancellableFix(() => Card_OnFixAll(group));
                 pnlErrors.Controls.Add(card);
             }
 
             Log($"Parsed {items.Count} items into {groups.Count} groups");
+        }
+
+        private void RunCancellableFix(Action action)
+        {
+            AutomationCancellation.Begin();
+            try
+            {
+                action();
+                AutomationCancellation.ThrowIfCancellationRequested();
+            }
+            catch (OperationCanceledException)
+            {
+                Log("Đã ngừng sửa lỗi theo yêu cầu (Shift + Esc).");
+                MessageBox.Show("Đã ngừng sửa lỗi.", "Đã hủy", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            finally
+            {
+                AutomationCancellation.End();
+            }
+        }
+
+        private void BtnPortalFix_Click(object sender, EventArgs e)
+        {
+            using var form = new PortalFixForm(
+                () => RunCancellableFix(FixPortalMaBenhKt));
+            form.ShowDialog(this);
+        }
+
+        private void FixPortalMaBenhKt()
+        {
+            const int xmlNumber = 1;
+            try
+            {
+                Log("Clear MA_BENH_KT for XML1 from Portal Fix.");
+
+                var h = _automation.FindWindowByTitleContains(_config.XmlAppWindowTitleKeyword);
+                if (h == IntPtr.Zero)
+                {
+                    MessageBox.Show($"Không tìm thấy cửa sổ phần mềm XML chứa tiêu đề '{_config.XmlAppWindowTitleKeyword}'.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (!_automation.ActivateWindow(h))
+                {
+                    MessageBox.Show("Không thể kích hoạt cửa sổ phần mềm XML.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                _automationUi.SyncMainWindowHandle(h);
+
+                if (_automationUi.FastDirectClearMaBenhKt(xmlNumber))
+                {
+                    Log("FastDirectClearMaBenhKt completed for XML1.");
+                    return;
+                }
+
+                var logSb = new StringBuilder();
+                logSb.AppendLine("ACTION: FastDirectClearMaBenhKt_Failed");
+                logSb.AppendLine("XML number: 1");
+                logSb.AppendLine($"Start time: {DateTime.Now:O}");
+                var path = DebugLogService.SaveDebugLog("XML1_FastDirect_ClearMaBenhKt_Failed", logSb.ToString());
+                MessageBox.Show($"Xóa MA_BENH_KT thất bại. Debug log saved: {path}", "Sửa lỗi trên Cổng", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log("FastDirectClearMaBenhKt failed; debug saved: " + path);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log("Error clearing MA_BENH_KT: " + ex.Message);
+                MessageBox.Show("Không thể sửa MA_BENH_KT: " + ex.Message, "Sửa lỗi trên Cổng", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void Card_OnGoto(XmlErrorGroup g)
@@ -375,6 +469,10 @@ namespace SupportEdit
                     Log($"ERROR: GoToSttFast failed for XML{g.Xml}" + (g.Stt > 0 ? $" STT {g.Stt}" : "") + ".");
                     MessageBox.Show($"Không thể đi đến lỗi trong XML{g.Xml}. Hãy kiểm tra DebugReads folder để xem chi tiết lỗi.", "Đi đến thất bại", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -601,6 +699,10 @@ namespace SupportEdit
                 var pasted = _automation.PasteXmlToExternalApp(h2, result.FixedXml);
                 Log($"Fixed NGAY_TH_YL XML{g.Xml} STT{g.Stt}. Backup: {backupPath}");
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 try
@@ -651,15 +753,26 @@ namespace SupportEdit
                 _automationUi.SyncMainWindowHandle(hNguoi);
 
                 string code;
+                PractitionerItem practitioner;
+                string ngayThYlForAttendance = null;
                 _config.Load();
                 Log($"AutoFixNguoiThucHien = {_config.AutoFixNguoiThucHien}");
-                if (_config.AutoFixNguoiThucHien)
+                Log($"CheckAttendanceBeforePractitionerFix = {_config.CheckAttendanceBeforePractitionerFix}");
+                Log($"AutoReplaceAbsentPractitioner = {_config.AutoReplaceAbsentPractitioner}");
+
+                if (_config.CheckAttendanceBeforePractitionerFix)
                 {
-                    var matched = ResolvePractitionerByServiceName(g);
-                    if (matched == null) return;
-                    code = ResolvePractitionerCode(g, matched);
+                    ngayThYlForAttendance = _automationUi.FastDirectReadTagValue(g.Xml, g.Stt, "NGAY_TH_YL");
+                    Log($"Read NGAY_TH_YL for attendance: {ngayThYlForAttendance}");
+                }
+
+                if (_config.AutoFixNguoiThucHien || _config.CheckAttendanceBeforePractitionerFix)
+                {
+                    practitioner = ResolvePractitionerByServiceName(g);
+                    if (practitioner == null) return;
+                    code = ResolvePractitionerCode(g, practitioner);
                     if (string.IsNullOrWhiteSpace(code)) return;
-                    Log($"Auto selected practitioner group '{matched.CategoryName}' ({GetPractitionerCodeDisplay(matched)}) -> {code}");
+                    Log($"Auto selected practitioner group '{practitioner.CategoryName}' ({GetPractitionerCodeDisplay(practitioner)}) -> {code}");
                 }
                 else
                 {
@@ -671,18 +784,81 @@ namespace SupportEdit
                         return;
                     }
 
-                    var selected = dlg.Selected;
-                    if (selected == null)
+                    practitioner = dlg.Selected;
+                    if (practitioner == null)
                     {
                         MessageBox.Show("Người dùng chưa chọn người thực hiện.");
                         return;
                     }
 
-                    code = ResolvePractitionerCode(g, selected);
+                    code = ResolvePractitionerCode(g, practitioner);
                     if (string.IsNullOrWhiteSpace(code))
                     {
                         return;
                     }
+                }
+
+                var shouldCheckAttendance = _config.CheckAttendanceBeforePractitionerFix && practitioner.CheckAttendance;
+                if (shouldCheckAttendance)
+                {
+                    if (!TryParseNgayThYlDate(ngayThYlForAttendance, out var attendanceDate))
+                    {
+                        MessageBox.Show(
+                            "Không đọc được NGAY_TH_YL hợp lệ để kiểm tra chấm công.",
+                            "Kiểm tra chấm công",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    Log($"Attendance enabled for '{practitioner.CategoryName}': {attendanceDate:dd/MM/yyyy}");
+                    var attendance = _attendanceCheck.Check(
+                        practitioner.CategoryName,
+                        attendanceDate,
+                        code,
+                        _config.AutoReplaceAbsentPractitioner);
+                    if (!attendance.Success)
+                    {
+                        MessageBox.Show(
+                            attendance.Message,
+                            "Kiểm tra chấm công",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    if (!attendance.IsWorking)
+                    {
+                        if (_config.AutoReplaceAbsentPractitioner
+                            && !string.IsNullOrWhiteSpace(attendance.ReplacementPractitionerCode))
+                        {
+                            var originalCode = code;
+                            code = attendance.ReplacementPractitionerCode;
+                            Log(
+                                $"Attendance replacement selected: {originalCode} -> {code}; " +
+                                $"Giờ vào={attendance.ReplacementTimeIn}, Giờ ra={attendance.ReplacementTimeOut}");
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                _config.AutoReplaceAbsentPractitioner
+                                    ? "NGUOI_THUC_HIEN này off và không tìm thấy người thực hiện khác đủ điều kiện để thay thế"
+                                    : "NGUOI_THUC_HIEN này off nên không thể thay thế",
+                                "Kiểm tra chấm công",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
+                    if (attendance.IsWorking)
+                    {
+                        Log($"Attendance passed for {code}: Giờ vào={attendance.TimeIn}, Giờ ra={attendance.TimeOut}");
+                    }
+                }
+                else if (_config.CheckAttendanceBeforePractitionerFix)
+                {
+                    Log($"Skipped attendance check for '{practitioner.CategoryName}' ({code}) by practitioner setting.");
                 }
 
                 // Order: UseFastDirectEdit -> UseDirectFindThenLocalScanEdit -> UseDirectIndexScanEdit -> whole-XML
@@ -851,6 +1027,10 @@ namespace SupportEdit
                 var pasted = _automation.PasteXmlToExternalApp(h2, result.FixedXml);
                 Log($"Fixed NGUOI_THUC_HIEN XML{g.Xml} STT{g.Stt}. Backup: {backupPath}");
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Log("Error in fix nguoi: " + ex.Message);
@@ -938,6 +1118,22 @@ namespace SupportEdit
             return System.Text.RegularExpressions.Regex.Replace(value.Trim(), "\\s+", " ").ToUpperInvariant();
         }
 
+        private static bool TryParseNgayThYlDate(string value, out DateTime date)
+        {
+            date = default;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+
+            var digits = new string(value.Where(char.IsDigit).ToArray());
+            if (digits.Length < 8) return false;
+
+            return DateTime.TryParseExact(
+                digits.Substring(0, 8),
+                "yyyyMMdd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out date);
+        }
+
         private void Card_OnFixTBncct(XmlErrorGroup g)
         {
             try
@@ -974,6 +1170,10 @@ namespace SupportEdit
                 var path = SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{g.Xml}_STT{g.Stt}_FastDirect_FixTBncct_Failed", logSb.ToString());
                 MessageBox.Show($"Sửa T_BNCCT thất bại. Debug log saved: {path}", "Fast Direct Edit Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Log("FastDirectFixTBncct failed; debug saved: " + path);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -1018,6 +1218,10 @@ namespace SupportEdit
                 MessageBox.Show($"Sửa MUC_HUONG thất bại. Debug log saved: {path}", "Fast Direct Edit Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Log("FastDirectFixMucHuong failed; debug saved: " + path);
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Log("Error in fix MUC_HUONG: " + ex.Message);
@@ -1061,9 +1265,59 @@ namespace SupportEdit
                 MessageBox.Show($"Sửa NGAY_TTOAN thất bại. Debug log saved: {path}", "Fast Direct Edit Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Log("FastDirectFixNgayTToan failed; debug saved: " + path);
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Log("Error in fix NGAY_TTOAN: " + ex.Message);
+            }
+        }
+
+        private void Card_OnFixSoCccd(XmlErrorGroup g)
+        {
+            try
+            {
+                Log($"Clear SO_CCCD for XML{g.Xml}" + (g.Stt > 0 ? $" STT {g.Stt}" : ""));
+
+                var h = _automation.FindWindowByTitleContains(_config.XmlAppWindowTitleKeyword);
+                if (h == IntPtr.Zero)
+                {
+                    MessageBox.Show($"Không tìm thấy cửa sổ phần mềm XML chứa tiêu đề '{_config.XmlAppWindowTitleKeyword}'.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (!_automation.ActivateWindow(h))
+                {
+                    MessageBox.Show("Không thể kích hoạt cửa sổ phần mềm XML.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                _automationUi.SyncMainWindowHandle(h);
+
+                if (_automationUi.FastDirectClearSoCccd(g.Xml, g.Stt))
+                {
+                    Log($"FastDirectClearSoCccd completed for XML{g.Xml}" + (g.Stt > 0 ? $" STT{g.Stt}" : ""));
+                    return;
+                }
+
+                var logSb = new System.Text.StringBuilder();
+                logSb.AppendLine("ACTION: FastDirectClearSoCccd_Failed");
+                logSb.AppendLine($"XML number: {g.Xml}");
+                logSb.AppendLine($"Target STT: {g.Stt}");
+                logSb.AppendLine($"Start time: {DateTime.Now:O}");
+                var path = SupportEdit.Services.DebugLogService.SaveDebugLog($"XML{g.Xml}_STT{g.Stt}_FastDirect_ClearSoCccd_Failed", logSb.ToString());
+                MessageBox.Show($"Xóa SO_CCCD thất bại. Debug log saved: {path}", "Fast Direct Edit Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log("FastDirectClearSoCccd failed; debug saved: " + path);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log("Error clearing SO_CCCD: " + ex.Message);
             }
         }
 
@@ -1074,6 +1328,7 @@ namespace SupportEdit
             if (g.Items.Any(i => i.Field == "T_BNCCT")) Card_OnFixTBncct(g);
             if (g.Items.Any(i => i.Field == "MUC_HUONG")) Card_OnFixMucHuong(g);
             if (g.Items.Any(i => i.Field == "NGAY_TTOAN")) Card_OnFixNgayTToan(g);
+            if (g.Items.Any(i => i.Field == "SO_CCCD")) Card_OnFixSoCccd(g);
         }
 
         // Debug: Test reading XML3

@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using SupportEdit.Models;
+using MessageBox = SupportEdit.UI.SupportMessageBox;
 
 namespace SupportEdit
 {
@@ -15,10 +18,13 @@ namespace SupportEdit
         private readonly PractitionerItem _item;
         private readonly List<string> _services;
         private DataGridView dgv;
+        private TextBox txtSearch;
+        private Button btnClearSearch;
         private TextBox txtService;
         private Button btnAdd;
         private Button btnDelete;
         private Button btnImport;
+        private Label lblTotal;
         private Button btnOk;
         private Button btnCancel;
 
@@ -42,17 +48,40 @@ namespace SupportEdit
             ClientSize = new Size(760, 500);
             TopMost = true;
 
+            var lblSearch = new Label
+            {
+                AutoSize = true,
+                Location = new Point(12, 16),
+                Text = "Tìm kiếm:"
+            };
+
+            txtSearch = new TextBox
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Location = new Point(82, 12),
+                PlaceholderText = "Nhập tên dịch vụ cần tìm...",
+                Size = new Size(566, 23)
+            };
+
+            btnClearSearch = new Button
+            {
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new Point(654, 10),
+                Size = new Size(94, 28),
+                Text = "Xóa tìm kiếm"
+            };
+
             dgv = new DataGridView
             {
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                Location = new Point(12, 12),
-                MultiSelect = false,
+                Location = new Point(12, 46),
+                MultiSelect = true,
                 ReadOnly = true,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                Size = new Size(736, 360)
+                Size = new Size(736, 326)
             };
             dgv.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "Tên dịch vụ", DataPropertyName = "Name", Name = "Name" });
 
@@ -60,6 +89,7 @@ namespace SupportEdit
             btnAdd = new Button { Anchor = AnchorStyles.Bottom | AnchorStyles.Right, Text = "Thêm", Location = new Point(476, 384), Size = new Size(80, 28) };
             btnDelete = new Button { Anchor = AnchorStyles.Bottom | AnchorStyles.Right, Text = "Xóa", Location = new Point(562, 384), Size = new Size(80, 28) };
             btnImport = new Button { Anchor = AnchorStyles.Bottom | AnchorStyles.Right, Text = "Nhập file", Location = new Point(648, 384), Size = new Size(100, 28) };
+            lblTotal = new Label { Anchor = AnchorStyles.Bottom | AnchorStyles.Left, AutoSize = true, Location = new Point(12, 428) };
             btnOk = new Button { Anchor = AnchorStyles.Bottom | AnchorStyles.Right, Text = "Lưu", Location = new Point(582, 454), Size = new Size(80, 28) };
             btnCancel = new Button { Anchor = AnchorStyles.Bottom | AnchorStyles.Right, Text = "Hủy", Location = new Point(668, 454), Size = new Size(80, 28) };
 
@@ -68,20 +98,47 @@ namespace SupportEdit
             btnImport.Click += BtnImport_Click;
             btnOk.Click += BtnOk_Click;
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            txtSearch.TextChanged += (s, e) => LoadData();
+            txtSearch.KeyDown += TxtSearch_KeyDown;
+            btnClearSearch.Click += (s, e) =>
+            {
+                txtSearch.Clear();
+                txtSearch.Focus();
+            };
 
+            Controls.Add(lblSearch);
+            Controls.Add(txtSearch);
+            Controls.Add(btnClearSearch);
             Controls.Add(dgv);
             Controls.Add(txtService);
             Controls.Add(btnAdd);
             Controls.Add(btnDelete);
             Controls.Add(btnImport);
+            Controls.Add(lblTotal);
             Controls.Add(btnOk);
             Controls.Add(btnCancel);
         }
 
         private void LoadData()
         {
+            var searchKey = NormalizeSearchKey(txtSearch?.Text);
+            var visibleServices = string.IsNullOrWhiteSpace(searchKey)
+                ? _services
+                : _services.Where(service => NormalizeSearchKey(service).Contains(searchKey, StringComparison.Ordinal)).ToList();
+
             dgv.DataSource = null;
-            dgv.DataSource = _services.Select(s => new ServiceRow { Name = s }).ToList();
+            dgv.DataSource = visibleServices.Select(s => new ServiceRow { Name = s }).ToList();
+            lblTotal.Text = string.IsNullOrWhiteSpace(searchKey)
+                ? $"Tổng cộng: {_services.Count} dòng"
+                : $"Đang hiển thị: {visibleServices.Count}/{_services.Count} dòng";
+        }
+
+        private void TxtSearch_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Escape) return;
+
+            txtSearch.Clear();
+            e.SuppressKeyPress = true;
         }
 
         private void BtnAdd_Click(object sender, EventArgs e)
@@ -92,8 +149,16 @@ namespace SupportEdit
 
         private void BtnDelete_Click(object sender, EventArgs e)
         {
-            if (dgv.CurrentRow?.DataBoundItem is not ServiceRow row) return;
-            _services.RemoveAll(s => string.Equals(s, row.Name, StringComparison.InvariantCultureIgnoreCase));
+            var selectedNames = dgv.SelectedRows
+                .Cast<DataGridViewRow>()
+                .Select(row => row.DataBoundItem as ServiceRow)
+                .Where(row => row != null)
+                .Select(row => row.Name)
+                .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
+
+            if (selectedNames.Count == 0) return;
+
+            _services.RemoveAll(selectedNames.Contains);
             LoadData();
         }
 
@@ -233,6 +298,25 @@ namespace SupportEdit
             return string.IsNullOrWhiteSpace(value)
                 ? string.Empty
                 : System.Text.RegularExpressions.Regex.Replace(value.Trim(), "\\s+", " ");
+        }
+
+        private static string NormalizeSearchKey(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+
+            var decomposed = NormalizeServiceName(value).Normalize(NormalizationForm.FormD);
+            var result = new StringBuilder(decomposed.Length);
+            foreach (var character in decomposed)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
+                {
+                    continue;
+                }
+
+                result.Append(char.ToLowerInvariant(character == 'đ' || character == 'Đ' ? 'd' : character));
+            }
+
+            return result.ToString().Normalize(NormalizationForm.FormC);
         }
 
         private class ServiceRow
